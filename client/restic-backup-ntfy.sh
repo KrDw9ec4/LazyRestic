@@ -18,7 +18,7 @@ notify_error() {
     if [[ -n "$NTFY_URL" && -n "$NTFY_TOPIC" && -n "$NTFY_TOKEN" ]]; then
         curl -s \
             -H "Authorization: Bearer $NTFY_TOKEN" \
-            -H "Title: $SCRIPT_NAME" \
+            -H "Title: $CONFIG_BASENAME" \
             -H "Tags: $RESTIC_BACKUP_TAG" \
             -d "$message" \
             "$NTFY_URL/$NTFY_TOPIC" >/dev/null
@@ -72,7 +72,7 @@ restic_check() {
 # ===== 变量声明 =====
 # 定义脚本根目录
 BASE_DIR="$(dirname "$0")/.."
-SCRIPT_NAME="$(basename "$0" .sh)"
+# SCRIPT_NAME="$(basename "$0" .sh)"
 
 LOG_DIR="$BASE_DIR/logs"
 LOG_FILE="$LOG_DIR/restic-backup-$(date '+%Y%m').log"
@@ -85,13 +85,14 @@ fi
 
 CONFIG_NAME="$1"
 load_env "$BASE_DIR/configs/$CONFIG_NAME"
+CONFIG_BASENAME="$(basename "$CONFIG_NAME" .env)"
 
 RESTIC_BACKUP_EXCLUDE="$BASE_DIR/configs/$RESTIC_BACKUP_EXCLUDE_NAME"
 
 # ===== 主流程 =====
 # 确保日志目录存在
 mkdir -p "$LOG_DIR"
-log "[INFO] 开始备份任务：$SCRIPT_NAME"
+log "[INFO] 开始备份任务：$CONFIG_BASENAME"
 
 # 检查 restic 流程
 restic_check
@@ -108,10 +109,10 @@ BACKUP_STATUS=${PIPESTATUS[0]}
 
 if [[ $BACKUP_STATUS -ne 0 ]]; then
     log "[ERROR] 备份失败，退出码：$BACKUP_STATUS"
-    notify_error "备份失败，脚本: $SCRIPT_NAME，退出码: $BACKUP_STATUS"
+    notify_error "备份失败，脚本: $CONFIG_BASENAME，退出码: $BACKUP_STATUS"
     exit "$BACKUP_STATUS"
 fi
 
-log "[INFO] 备份任务完成：$SCRIPT_NAME"
+log "[INFO] 备份任务完成：$CONFIG_BASENAME"
 
 exit 0
