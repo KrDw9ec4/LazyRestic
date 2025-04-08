@@ -18,6 +18,47 @@ LazyRestic
 └── README.md
 ```
 
+## 脚本功能总结
+
+1. **加载配置文件**
+   - 自动加载 `configs/` 目录下的指定 `.env` 配置文件。
+   - 如果配置文件缺失，会输出日志并使用 Ntfy 发送错误通知。
+2. **Restic 环境检查**
+   - 检查 restic 是否安装，仓库是否已初始化，环境变量是否配置完整。
+   - 如果检测失败，会输出日志并使用 Ntfy 通知。
+3. **执行备份操作**
+   - 使用 restic 执行备份，自动使用配置的标签和排除文件。
+   - 使用 `--skip-if-unchanged`，如果没有更新数据，则不执行备份。
+   - 备份日志会写入 `logs/` 目录下的日志文件。
+4. **异常处理**
+   - 如果备份失败，自动上报错误信息到 Ntfy 服务器，便于管理者立即知晓。
+
+## 使用方法
+
+克隆并进入本仓库：
+
+```bash
+git clone https://github.com/KrDw9ec4/LazyRestic.git
+cd LazyRestic
+```
+
+添加并[修改配置文件](#配置说明)：
+
+```bash
+cp configs/config-template-ntfy.env configs/config-data-ntfy.env
+vim configs/config-data-ntfy.env
+```
+
+执行主脚本：
+
+```bash
+/path/to/LazyRestic/client/restic-backup-ntfy.sh config-data-ntfy.env
+```
+
+**注意：**
+
+- 需要传入配置文件名，不要含前缀路径（如 `config-data-ntfy.env`）。
+
 ## 配置说明
 
 所有可配置项放在 `configs/` 目录下，以 `config-` 为前缀的 `.env` 文件。模板配置文件：
@@ -61,40 +102,6 @@ NTFY_TOKEN=tk_xxxxxxx
   - `NTFY_URL` ：Ntfy 服务器地址。
   - `NTFY_TOPIC` ：通知主题。
   - `NTFY_TOKEN` ：推送通知使用的 Token。
-
-## 使用方法
-
-执行主脚本：
-
-```bash
-/path/to/lazyrestic/client/restic-backup-ntfy.sh config-template-ntfy.env
-```
-
-**注意：**
-
-- 需要传入配置文件名，不要含前缀路径（如 `config-template-ntfy.env`）。
-
-## 脚本功能总结
-
-1. **加载配置文件**
-
-   - 自动加载 `configs/` 目录下的指定 `.env` 配置文件。
-   - 如果配置文件缺失，会输出日志并使用 Ntfy 发送错误通知。
-
-2. **Restic 环境检查**
-
-   - 检查 restic 是否安装，仓库是否已初始化，环境变量是否配置完整。
-   - 如果检测失败，会输出日志并使用 Ntfy 通知。
-
-3. **执行备份操作**
-
-   - 使用 restic 执行备份，自动使用配置的标签和排除文件。
-   - 使用 `--skip-if-unchanged`，如果没有更新数据，则不执行备份。
-   - 备份日志会写入 `logs/` 目录下的日志文件。
-
-4. **异常处理**
-
-   - 如果备份失败，自动上报错误信息到 Ntfy 服务器，便于管理者立即知晓。
 
 ---
 
