@@ -72,7 +72,7 @@ restic_check() {
 # ===== 变量声明 =====
 # 定义脚本根目录
 BASE_DIR="$(dirname "$0")/.."
-SCRIPT_NAME="$(basename "$0")"
+SCRIPT_NAME="$(basename "$0" .sh)"
 
 LOG_DIR="$BASE_DIR/logs"
 LOG_FILE="$LOG_DIR/restic-backup-$(date '+%Y%m').log"
