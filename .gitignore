@@ -1,0 +1,6 @@
+configs/*
+!configs/config-template-*.env
+!configs/exclude-default.txt
+
+logs/*
+!logs/.gitkeep
