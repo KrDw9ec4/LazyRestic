@@ -85,7 +85,7 @@ vim /home/krdw/LazyRestic/configs/passwd-prod.key
 > ```bash
 > source configs/config-compose-ntfy.env
 > unset RESTIC_PASSWORD_FILE
-> export RESTIC_PASSWORD="xxxxx"
+> export RESTIC_PASSWORD="xxxxx" # 请使用已有的密码
 > cat /home/krdw/LazyRestic/configs/passwd-prod.key | restic key add
 > ```
 >
@@ -111,6 +111,15 @@ restic cat config
 **注意：**
 
 - 需要传入配置文件名，不要含前缀路径（如 `config-compose-ntfy.env`）。
+- 脚本支持软链接，可以通过软链接的方式将脚本放在 `/usr/local/bin/` 目录下，方便全局调用。
+
+```bash
+sudo ln -s /home/krdw/LazyRestic/client/restic-backup-ntfy.sh /usr/local/bin/lazyrestic
+```
+
+```bash
+lazyrestic config-compose-ntfy.env
+```
 
 ## 脚本功能总结
 
