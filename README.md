@@ -10,6 +10,7 @@ LazyRestic
 │   └── restic-backup-ntfy.sh # 备份主脚本
 ├── configs
 │   ├── config-template-ntfy.env # 配置文件模板
+│   ├── passwd-hostname.key # Restic 仓库密码文件
 │   └── exclude-default.txt # 默认排除表
 ├── logs
 │   ├── .gitkeep
@@ -17,6 +18,99 @@ LazyRestic
 ├── server
 └── README.md
 ```
+
+## 使用方法
+
+克隆并进入本仓库：
+
+```bash
+cd ~
+git clone https://github.com/KrDw9ec4/LazyRestic.git
+cd LazyRestic
+```
+
+添加并[修改配置文件](#配置说明)：
+
+```bash
+cp configs/config-template-ntfy.env configs/config-compose-ntfy.env
+vim configs/config-compose-ntfy.env
+```
+
+```diff
+# ===== Restic 仓库配置 =====
+
+export RESTIC_HOST="$HOSTNAME"
+-export RESTIC_REPOSITORY=/path/to/restic/repo
++export RESTIC_REPOSITORY=rest:http://10.1.1.102:8888/appdata
+-export RESTIC_PASSWORD_FILE=/path/to/restic/passwdfile
++export RESTIC_PASSWORD_FILE=/home/krdw/LazyRestic/configs/passwd-prod.key
+
+# ===== 可修改配置项 =====
+
+# 备份数据源路径
+-RESTIC_BACKUP_SOURCE="/path/to/restic/backup/source"
++RESTIC_BACKUP_SOURCE="/home/krdw/compose"
+
+# 备份标签
+-RESTIC_BACKUP_TAG="$RESTIC_HOST,template,gold"
++RESTIC_BACKUP_TAG="$RESTIC_HOST,compose,bronze"
+
+# 备份排除文件名称
+RESTIC_BACKUP_EXCLUDE_NAME="exclude-default.txt"
+
+# ===== Ntfy 配置 =====
+
+-NTFY_URL=https://ntfy.sh
++NTFY_URL=https://ntfy.example.com
+NTFY_TOPIC=restic
+-NTFY_TOKEN=tk_xxxxxxx
++NTFY_TOKEN=tk_123456
+```
+
+添加密码文件：
+
+```bash
+vim /home/krdw/LazyRestic/configs/passwd-prod.key
+```
+
+
+> 若要生成密码：
+>
+> ```bash
+> openssl rand -base64 32 > /home/krdw/LazyRestic/configs/passwd-prod.key
+> ```
+>
+> 然后通过已有的密钥，将新生成的密码添加到仓库中：
+>
+> ```bash
+> source configs/config-compose-ntfy.env
+> unset RESTIC_PASSWORD_FILE
+> export RESTIC_PASSWORD="xxxxx"
+> cat /home/krdw/LazyRestic/configs/passwd-prod.key | restic key add
+> ```
+>
+> ```bash
+> unset RESTIC_PASSWORD
+> source configs/config-compose-ntfy.env
+> restic key list
+> ```
+
+确保可访问 restic 仓库并且仓库已初始化：
+
+```bash
+source configs/config-compose-ntfy.env
+restic cat config
+```
+
+执行主脚本：
+
+```bash
+/home/krdw/LazyRestic/client/restic-backup-ntfy.sh config-compose-ntfy.env
+```
+
+**注意：**
+
+- 需要传入配置文件名，不要含前缀路径（如 `config-compose-ntfy.env`）。
 
 ## 脚本功能总结
 
@@ -33,62 +127,9 @@ LazyRestic
 4. **异常处理**
    - 如果备份失败，自动上报错误信息到 Ntfy 服务器，便于管理者立即知晓。
 
-## 使用方法
-
-克隆并进入本仓库：
-
-```bash
-git clone https://github.com/KrDw9ec4/LazyRestic.git
-cd LazyRestic
-```
-
-添加并[修改配置文件](#配置说明)：
-
-```bash
-cp configs/config-template-ntfy.env configs/config-data-ntfy.env
-vim configs/config-data-ntfy.env
-```
-
-执行主脚本：
-
-```bash
-/path/to/LazyRestic/client/restic-backup-ntfy.sh config-data-ntfy.env
-```
-
-**注意：**
-
-- 需要传入配置文件名，不要含前缀路径（如 `config-data-ntfy.env`）。
-
 ## 配置说明
 
-所有可配置项放在 `configs/` 目录下，以 `config-` 为前缀的 `.env` 文件。模板配置文件：
-
-```env
-# ===== Restic 仓库配置 =====
-
-export RESTIC_HOST="$HOSTNAME"
-export RESTIC_REPOSITORY=/path/to/restic/repo
-export RESTIC_PASSWORD_FILE=/path/to/restic/passwdfile
-
-# ===== 可修改配置项 =====
-
-# 备份数据源路径
-RESTIC_BACKUP_SOURCE="/path/to/restic/backup/source"
-
-# 备份标签
-RESTIC_BACKUP_TAG="$RESTIC_HOST,template,gold"
-
-# 备份排除文件名称
-RESTIC_BACKUP_EXCLUDE_NAME="exclude-default.txt"
-
-# ===== Ntfy 配置 =====
-
-NTFY_URL=https://ntfy.sh
-NTFY_TOPIC=restic
-NTFY_TOKEN=tk_xxxxxxx
-```
-
-### 配置项说明
+所有可配置项放在 `configs/` 目录下，以 `config-` 为前缀的 `.env` 文件。
 
 - **Restic 仓库配置**
   - `RESTIC_HOST` ：本次备份快照的 Host 属性，默认为主机名称 (HOSTNAME)。
