@@ -1,5 +1,7 @@
 import json
 import logging
+import os
+import platform
 import shutil
 import subprocess
 from dataclasses import dataclass
@@ -86,7 +88,7 @@ class Restic:
         command: str,
         args: Optional[List[str]] = None,
         env: Optional[Dict[str, str]] = None,
-        json_output: bool = True,
+        # json_output: bool = True,
         timeout: Optional[int] = None,
     ):
         """
@@ -96,7 +98,6 @@ class Restic:
             command: 要执行的 Restic 命令
             args: 附加参数列表
             env: 环境变量字典
-            json_output: 是否启用 JSON 输出
             timeout: 命令超时时间（秒）
 
         Returns:
@@ -114,16 +115,13 @@ class Restic:
         if args:
             cmd.extend(args)  # 附加参数
 
-        if json_output:
-            cmd.append("--json")  # 添加 JSON 输出选项
+        cmd.append("--json")  # 添加 JSON 输出选项
 
-        logger.debug(f"执行命令: {' '.join(cmd)}")
+        logger.debug(f"准备执行命令: {' '.join(cmd)}")
 
         # 构建运行时环境变量
-        _env = {
-            "RESTIC_REPOSITORY": self.config.repository,
-            "RESTIC_PASSWORD": self.config.password,
-        }
+        _env = self._get_env()
+
         if env:
             _env.update(env)
 
@@ -149,14 +147,39 @@ class Restic:
 
         # 检查返回码并处理错误
         if process.returncode != 0:
-            self._handle_command_error(
-                command, process.returncode, process.stderr, json_output
-            )
+            self._handle_command_error(command, process.returncode, process.stderr)
 
         return process.stdout
 
+    def _get_env(self) -> Dict[str, str]:
+        """获取环境变量"""
+        _env = {
+            "RESTIC_REPOSITORY": self.config.repository,
+            "RESTIC_PASSWORD": self.config.password,
+        }
+        # 添加系统环境变量
+        system = platform.system()
+        if system == "Windows":
+            logger.debug("检测到 Windows 环境")
+            _env["PATH"] = os.environ.get("PATH", "")
+            _env["LOCALAPPDATA"] = os.environ.get("LOCALAPPDATA", "~/AppData/Local")
+            _env["TMP"] = os.environ.get("TMP", "~/AppData/Local/Temp")
+            _env["TEMP"] = os.environ.get("TEMP", "~/AppData/Local/Temp")
+        elif os.environ.get("PREFIX"):  # 判断为 Termux 环境
+            logger.debug("检测到 Termux 环境")
+            _env["PATH"] = os.environ.get("PATH", "/data/data/com.termux/files/usr/bin")
+            _env["TMPDIR"] = os.environ.get(
+                "TMPDIR", "/data/data/com.termux/files/usr/tmp"
+            )
+        elif system in ("Linux", "Darwin"):
+            logger.debug("检测到 Linux 或 macOS 环境")
+            _env["PATH"] = os.environ.get("PATH", "/usr/local/bin:/usr/bin:/bin")
+            _env["TMPDIR"] = os.environ.get("TMPDIR", "/tmp")
+
+        return _env
+
     def _handle_command_error(
-        self, command: str, return_code: int, stderr: str, json_output: bool
+        self, command: str, return_code: int, stderr: str
     ) -> None:
         """
         根据返回码处理命令错误
@@ -187,16 +210,15 @@ class Restic:
 
         if stderr:
             stderr.strip()  # 清理错误输出的前后空白
-            if json_output:
-                try:
-                    stderr_json: dict = json.loads(stderr)
-                    logger.debug(f"JSON 解析成功：{stderr_json}")
-                    full_error_msg += (
-                        f", 错误信息: {stderr_json.get('message', '未知错误')}"
-                    )
-                except json.JSONDecodeError as e:
-                    logger.warning(f"JSON 解析失败：{e}，返回原始错误信息")
-                    full_error_msg += f", 错误信息: {stderr}"
+            try:
+                stderr_json: dict = json.loads(stderr)
+                logger.debug(f"JSON 解析成功：{stderr_json}")
+                full_error_msg += (
+                    f", 错误信息: {stderr_json.get('message', '未知错误')}"
+                )
+            except json.JSONDecodeError as e:
+                logger.warning(f"JSON 解析失败：{e}，返回原始错误信息")
+                full_error_msg += f", 错误信息: {stderr}"
 
         logger.error(full_error_msg)
 
