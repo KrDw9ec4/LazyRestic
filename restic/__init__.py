@@ -5,7 +5,7 @@ import platform
 import shutil
 import subprocess
 from dataclasses import dataclass
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Union
 
 from restic.error import (
     ResticCommandError,
@@ -232,3 +232,50 @@ class Restic:
                 raise ResticPasswordError(base_error_msg)
             case _:
                 raise ResticCommandError(base_error_msg)
+
+    def backup(
+        self,
+        paths: Union[str, List[str], None] = None,
+        tags: Optional[str] = None,
+        skip_if_unchanged: bool = False,
+        # json_output: bool = True,
+        dry_run: bool = False,
+        timeout: Optional[int] = None,
+        additional_args: Optional[List[str]] = None,
+        additional_env: Optional[Dict[str, str]] = None,
+    ) -> dict:
+        """执行备份操作"""
+        # 生成 args 列表
+        args = []
+        if paths:
+            args.extend(paths if isinstance(paths, list) else [paths])
+        if tags:
+            args.extend(["--tag", tags])
+        if skip_if_unchanged:
+            args.append("--skip-if-unchanged")
+        if dry_run:
+            args.append("--dry-run")
+        if additional_args:
+            args.extend(additional_args)
+
+        # 运行 backup 命令
+        result = self._exec(
+            command="backup",
+            args=args,
+            env=additional_env,
+            timeout=timeout,
+        )
+
+        # 解析备份结果
+        return self._parse_backup_result(result)
+
+    def _parse_backup_result(self, result: str) -> dict:
+        """解析备份结果"""
+        lines = [line for line in result.splitlines() if line.strip()]
+        try:
+            _summary = json.loads(lines[-1])
+            logger.debug(f"备份结果解析成功: {_summary}")
+            return _summary
+        except json.JSONDecodeError as e:
+            logger.error(f"备份结果解析失败: {e}, 原始输出: {result}")
+            raise
